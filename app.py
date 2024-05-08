@@ -1,11 +1,11 @@
 # path to bottle main package to replace with own bottle
 # /home/mysite/.local/lib/python3.10/site-packages/bottle.py
 
-from bottle import default_app, get, post, response, run, static_file, template
+# from bottle import default_app, put, delete, get, post, response, run, static_file, template
 # import pathlib
 # import sys
 # sys.path.insert(0, str(pathlib.Path(__file__).parent.resolve())+"/bottle")
-from bottle import default_app, get, post, request, response, run, static_file, template
+from bottle import default_app, put, delete, get, post, request, response, run, static_file, template
 import x
 from icecream import ic
 import bcrypt
@@ -34,20 +34,6 @@ def _():
 @get("/images/<item_splash_image>")
 def _(item_splash_image):
     return static_file(item_splash_image, "images")
-
-
-##############################
-@get("/arango")
-def _():
-    try:
-        q = {"query":"FOR item IN items LIMIT 1 RETURN item"}
-        items = x.arango(q)
-        return items
-    except Exception as ex:
-        ic(ex)
-        return ex
-    finally:
-        pass
 
 ##############################
 @get("/")
@@ -243,10 +229,78 @@ def _():
         </template>
         """
     except Exception as ex:
-        pass
+        ic(ex)
+        return ex
     finally:
-        if "db" in locals(): db.close()
+        pass
+    
+##############################
+@get("/arango/items")
+def _():
+    try:
+        q = {"query":"FOR item IN items LIMIT 1 RETURN item"}
+        items = x.arango(q)
+        return items
+    except Exception as ex:
+        ic(ex)
+        return ex
+    finally:
+        pass
 
+##############################
+@delete("/arango/items/<key>")
+def _(key):
+    try:
+        dynamic = {"_key": key}
+        q = {"query":"REMOVE @dynamic IN items RETURN OLD", 
+             "bindVars":{
+                            "dynamic": dynamic
+                        }
+            }
+        items = x.arango(q)
+        return items
+    except Exception as ex:
+        ic(ex)
+        return ex
+    finally:
+        pass
+
+##############################
+@post("/arango/items")
+def _():
+    try:
+        # TODO: validate
+        item_name = request.forms.get("item_name", "")
+        item_data= {"name":item_name}
+        q = {   "query": "INSERT @item_data INTO items RETURN NEW",
+                "bindVars":{"item_data":item_data}
+             }
+        item = x.arango(q)
+        return item
+    except Exception as ex:
+        ic(ex)
+        return ex
+    finally:
+        pass
+
+##############################
+@put("/arango/items/<key>")
+def _(key):
+    try:
+        # TODO: validate
+        item_name = request.forms.get("item_name", "")
+        item_key = {"_key": key}
+        item_data = {"name":item_name}
+        q = {   "query": "UPDATE @item_key WITH @item_data IN items RETURN NEW",
+                "bindVars":{"item_key":item_key, "item_data":item_data}
+             }
+        item = x.arango(q)
+        return item
+    except Exception as ex:
+        ic(ex)
+        return ex
+    finally:
+        pass
 
 ##############################
 try:
