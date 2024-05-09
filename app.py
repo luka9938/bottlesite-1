@@ -35,6 +35,9 @@ def _():
 def _(item_splash_image):
     return static_file(item_splash_image, "images")
 
+
+
+
 ##############################
 @get("/")
 def _():
@@ -281,7 +284,66 @@ def _():
         ic(ex)
         return ex
     finally:
+        if "db" in locals(): db.close()
+
+
+
+
+
+##############################
+@get("/arango/items")
+def _():
+    try:
+        q = {"query":"FOR item IN items LIMIT 1 RETURN item"}
+        items = x.arango(q)
+        return items
+    except Exception as ex:
+        ic(ex)
+        return ex
+    finally:
         pass
+
+
+
+##############################
+@delete("/arango/items/<key>")
+def _(key):
+    try:
+        dynamic = {"_key": key}
+        q = {   "query":"REMOVE @dynamic IN items RETURN OLD", 
+                "bindVars":{
+                                "dynamic":dynamic
+                            }
+            }
+        items = x.arango(q)
+        return items
+    except Exception as ex:
+        ic(ex)
+        return ex
+    finally:
+        pass
+
+
+##############################
+@post("/arango/items")
+def _():
+    try:
+        # TODO: validate
+        item_name = request.forms.get("item_name", "")
+        item = {"name":item_name}
+        q = {   "query": "INSERT @item INTO items RETURN NEW",
+                "bindVars":{"item":item}
+             }
+        item = x.arango(q)
+        return item
+    except Exception as ex:
+        ic(ex)
+        return ex
+    finally:
+        pass
+
+
+
 
 ##############################
 @put("/arango/items/<key>")
@@ -289,8 +351,8 @@ def _(key):
     try:
         # TODO: validate
         item_name = request.forms.get("item_name", "")
-        item_key = {"_key": key}
-        item_data = {"name":item_name}
+        item_key = { "_key" : key }
+        item_data = { "name" : item_name }
         q = {   "query": "UPDATE @item_key WITH @item_data IN items RETURN NEW",
                 "bindVars":{"item_key":item_key, "item_data":item_data}
              }
@@ -302,12 +364,15 @@ def _(key):
     finally:
         pass
 
+
+
+
 ##############################
 try:
     import production
     application = default_app()
 except:
-    run(host="0.0.0.0", port=80, debug=True, reloader=True, interval=0)
+    run(host="0.0.0.0", port=80, debug=True, reloader=True, interval=0.5)
 
 
 
